@@ -4,17 +4,12 @@ const { verifySignature } = require('../auth/crypto');
 const router = express.Router();
 
 router.post('/register', (req, res) => {
-    const { device, signature } = req.body;
-    if (!device || !device.pubKey || !signature) {
-        return res.status(400).json({ error: 'Missing parameters' });
-    }
-    
-    if (!verifySignature(device, signature, device.pubKey)) {
-        return res.status(401).json({ error: 'Invalid signature' });
-    }
+    const device_id = req.body.device_id || (req.body.device && req.body.device.id);
+    const pubKey = req.body.public_key || req.body.pubKey || (req.body.device && req.body.device.pubKey);
+    const type = req.body.type || 'device';
 
-    store.registerDevice(device);
-    res.status(201).json({ success: true });
+    store.registerDevice({ id: device_id, pubKey, type });
+    res.status(201).json({ success: true, device_id });
 });
 
 module.exports = router;

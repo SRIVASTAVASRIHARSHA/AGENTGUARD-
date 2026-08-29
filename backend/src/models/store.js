@@ -19,7 +19,24 @@ class Store {
 
     createApproval(request) {
         const id = crypto.randomUUID();
-        const approval = { ...request, id, status: 'PENDING', createdAt: Date.now() };
+        let score = request.risk_score || 0;
+        let level = 'LOW';
+        
+        const cmd = request.command || '';
+        if (score === 0) {
+            if (/rm\s+-rf|terraform\s+destroy|git\s+push\s+--force|DROP\s+TABLE/i.test(cmd)) {
+                score = 96;
+                level = 'CRITICAL';
+            } else if (/chmod|chown|kill\s+-9|sudo/i.test(cmd)) {
+                score = 65;
+                level = 'HIGH';
+            } else {
+                score = 15;
+                level = 'LOW';
+            }
+        }
+        
+        const approval = { ...request, id, risk_score: score, level, status: 'PENDING', createdAt: Date.now() };
         this.approvals.set(id, approval);
         this.appendAuditLog('APPROVAL_CREATED', approval);
         return approval;

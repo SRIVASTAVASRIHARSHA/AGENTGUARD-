@@ -416,14 +416,19 @@
   </div>
 
   <script>
-    const RELAY_ORIGIN = "https://metal-parrots-shine.loca.lt";
-    const DEVICE_ID = "phone-web";
+    // ponytail: fallback to current window location if localtunnel fails
+    const RELAY_ORIGIN = (window.location.origin && window.location.origin !== "null" && !window.location.origin.includes("file:")) ? window.location.origin : "http://localhost:3000";
     let currentRequestId = null;
     let approvedCount = 0;
     let deniedCount = 0;
 
+    // ponytail: request notification permission on load for phone buzz
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+
     function switchTab(tabId, btn) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       
       document.getElementById(`tab-${tabId}`).classList.add('active');
@@ -507,6 +512,15 @@
       if (navigator.vibrate) {
         // Multi-pulse pattern for mobile devices: [vibrate 500ms, pause 100ms, vibrate 500ms, pause 100ms, vibrate 1000ms]
         navigator.vibrate([500, 100, 500, 100, 1000]);
+      }
+      // ponytail: native notification trigger for phone buzz/banner alert
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('🚨 AgentGuard Intercept', {
+            body: 'High-risk CLI command pending approval!',
+            icon: '🛡️'
+          });
+        } catch (e) {}
       }
       try {
         // Audio alert fallback chime for devices without vibration motor

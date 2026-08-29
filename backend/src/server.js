@@ -8,9 +8,22 @@ const auditRouter = require('./routes/audit');
 const app = express();
 app.use(express.json());
 
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req.method === "OPTIONS") return res.sendStatus(200);
+    next();
+});
+
 app.use('/devices', devicesRouter);
+app.use('/api/v1/devices', devicesRouter);
 app.use('/approvals', approvalRouter);
+app.use('/api/v1/approval', approvalRouter);
 app.use('/audit', auditRouter);
+app.use('/api/v1/audit', auditRouter);
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });

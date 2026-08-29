@@ -12,6 +12,15 @@
 
 ---
 
+## 📦 Releases & Downloads
+
+Download official AgentGuard mobile binaries and APK build releases directly from GitHub:
+
+- 🚀 **[GitHub Official Releases Page](https://github.com/whysooraj/AGENTGUARD-/releases)**
+- 📲 **[Download Latest APK (`app-debug.apk` - v1.0.0)](https://github.com/whysooraj/AGENTGUARD-/releases/download/v1.0.0/app-debug.apk)** (10.0 MB)
+
+---
+
 ## 🛡️ What is AgentGuard?
 
 **AgentGuard** is a zero-trust, human-in-the-loop security gateway designed to protect your infrastructure from accidental or malicious commands issued by autonomous AI coding agents (e.g. Gemini, Claude Code, AutoGPT, custom subagents).

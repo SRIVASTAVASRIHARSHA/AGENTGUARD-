@@ -68,6 +68,14 @@
       gap: 12px;
     }
 
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #a1a1aa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
     .meta-row {
       display: flex;
       justify-content: space-between;
@@ -145,6 +153,42 @@
       width: 100%;
     }
 
+    .agent-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .agent-name {
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .agent-cmd {
+      font-family: monospace;
+      color: #a1a1aa;
+      font-size: 11px;
+    }
+
+    .agent-status {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(52, 211, 153, 0.15);
+      color: #34d399;
+    }
+
+    .agent-status.intercepted {
+      background: rgba(244, 63, 94, 0.15);
+      color: #f43f5e;
+    }
+
     .stats-container {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -175,7 +219,7 @@
     <div class="brand">🛡️ AgentGuard</div>
     <div class="status-pill">
       <span class="status-dot" id="dot"></span>
-      <span id="conn-status">Connecting</span>
+      <span id="conn-status">Checking</span>
     </div>
   </header>
 
@@ -187,7 +231,7 @@
         <span class="timer" id="req-timer">30s timeout</span>
       </div>
 
-      <div class="cmd-display" id="active-cmd">Waiting for dangerous command...</div>
+      <div class="cmd-display" id="active-cmd">Awaiting high-risk command stream...</div>
 
       <div class="reason-text" id="req-context">Hardware Ed25519 authentication</div>
 
@@ -197,6 +241,41 @@
       </div>
 
       <button class="btn-sim" onclick="createTestApproval()">+ Test `git push --force` Command</button>
+    </div>
+
+    <!-- 🤖 Live Running Agents Monitor Viewpoint -->
+    <div class="card">
+      <div class="card-title">🤖 Active Agents Monitor Viewpoint</div>
+      <div id="agents-list" style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="agent-row">
+          <div>
+            <div class="agent-name">Gemini-Code-Agent</div>
+            <div class="agent-cmd">git status</div>
+          </div>
+          <span class="agent-status">IDLE</span>
+        </div>
+        <div class="agent-row">
+          <div>
+            <div class="agent-name">Claude-Code-Agent</div>
+            <div class="agent-cmd">pytest</div>
+          </div>
+          <span class="agent-status">IDLE</span>
+        </div>
+        <div class="agent-row">
+          <div>
+            <div class="agent-name">Hermes-Agent</div>
+            <div class="agent-cmd">npm test</div>
+          </div>
+          <span class="agent-status">IDLE</span>
+        </div>
+        <div class="agent-row">
+          <div>
+            <div class="agent-name">OpenClaw-Agent</div>
+            <div class="agent-cmd">docker build</div>
+          </div>
+          <span class="agent-status">IDLE</span>
+        </div>
+      </div>
     </div>
 
     <!-- Stats -->
@@ -217,52 +296,54 @@
   </main>
 
   <script>
-    const RELAY_HOST = window.location.hostname + ":3000";
+    const RELAY_ORIGIN = "https://metal-parrots-shine.loca.lt";
     const DEVICE_ID = "phone-web";
-    let ws;
     let currentRequestId = null;
     let approvedCount = 0;
     let deniedCount = 0;
 
-    function connectWS() {
+    async function pollRelayServer() {
       try {
-        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        ws = new WebSocket(`${wsProtocol}//${RELAY_HOST}/ws/phone/${DEVICE_ID}`);
-        
-        ws.onopen = () => {
+        // Poll for pending high-risk approval requests
+        const res = await fetch(`${RELAY_ORIGIN}/api/v1/approval/pending`);
+        if (res.ok) {
+          const requests = await res.json();
           document.getElementById("dot").classList.add("online");
-          document.getElementById("conn-status").innerText = "Relay Active";
-          registerDevice();
-        };
-        
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === "approval_request") {
-              displayRequest(data.request);
-            }
-          } catch (e) {}
-        };
+          document.getElementById("conn-status").innerText = "Relay Connected";
 
-        ws.onclose = () => {
-          document.getElementById("dot").classList.remove("online");
-          document.getElementById("conn-status").innerText = "Reconnecting";
-          setTimeout(connectWS, 3000);
-        };
-      } catch(e) {
-        document.getElementById("conn-status").innerText = "Standalone";
+          if (requests && requests.length > 0) {
+            const req = requests[0];
+            if (currentRequestId !== req.id) {
+              displayRequest(req);
+            }
+          }
+        }
+
+        // Poll active running agents monitor viewpoint
+        const agentsRes = await fetch(`${RELAY_ORIGIN}/api/v1/approval/active-agents`);
+        if (agentsRes.ok) {
+          const agents = await agentsRes.json();
+          renderActiveAgents(agents);
+        }
+      } catch (e) {
+        document.getElementById("dot").classList.remove("online");
+        document.getElementById("conn-status").innerText = "Connecting...";
       }
     }
 
-    async function registerDevice() {
-      try {
-        const httpProtocol = window.location.protocol;
-        await fetch(`${httpProtocol}//${RELAY_HOST}/api/v1/devices/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ device_id: DEVICE_ID, public_key: "web-pk", type: "phone" })
-        });
-      } catch (e) {}
+    function renderActiveAgents(agents) {
+      const container = document.getElementById("agents-list");
+      if (!agents || agents.length === 0) return;
+
+      container.innerHTML = agents.map(a => `
+        <div class="agent-row">
+          <div>
+            <div class="agent-name">🤖 ${a.agent}</div>
+            <div class="agent-cmd">${a.current_command || 'No active command'}</div>
+          </div>
+          <span class="agent-status ${a.status.includes('INTERCEPTED') ? 'intercepted' : ''}">${a.status}</span>
+        </div>
+      `).join('');
     }
 
     function displayRequest(req) {
@@ -273,19 +354,18 @@
 
       // 📳 Full Haptic Vibration for 3 Seconds on Dangerous Command Arrival
       if (navigator.vibrate) {
-        // 3-second continuous pulse vibration pattern: [3000ms vibration]
         navigator.vibrate([3000]);
       }
     }
 
     async function createTestApproval() {
       try {
-        const httpProtocol = window.location.protocol;
-        const res = await fetch(`${httpProtocol}//${RELAY_HOST}/approvals/request`, {
+        const res = await fetch(`${RELAY_ORIGIN}/api/v1/approval/request`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             device_id: "laptop-cli",
+            agent_name: "Gemini-Code-Agent",
             command: "git push --force origin main",
             risk_score: 96,
             reason: "Destructive remote push operation"
@@ -293,6 +373,7 @@
         });
         const data = await res.json();
         displayRequest(data);
+        pollRelayServer();
       } catch(e) {
         displayRequest({ id: "req-sim", command: "git push --force origin main", risk_score: 96, reason: "Local simulation" });
       }
@@ -321,8 +402,7 @@
       if (!currentRequestId) { alert("No pending request"); return; }
       
       try {
-        const httpProtocol = window.location.protocol;
-        await fetch(`${httpProtocol}//${RELAY_HOST}/approvals/response`, {
+        await fetch(`${RELAY_ORIGIN}/api/v1/approval/response`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -343,17 +423,19 @@
       
       document.getElementById("active-cmd").innerText = `Action recorded: ${status}`;
       currentRequestId = null;
+      pollRelayServer();
     }
 
     async function panicStop() {
       try {
-        const httpProtocol = window.location.protocol;
-        await fetch(`${httpProtocol}//${RELAY_HOST}/api/v1/agents/stop-all`, { method: "POST" });
+        await fetch(`${RELAY_ORIGIN}/api/v1/agents/stop-all`, { method: "POST" });
       } catch(e) {}
       alert("Emergency panic signal sent!");
     }
 
-    connectWS();
+    // Start polling every 1.5 seconds for instant relay synchronization
+    setInterval(pollRelayServer, 1500);
+    pollRelayServer();
   </script>
 </body>
 </html>

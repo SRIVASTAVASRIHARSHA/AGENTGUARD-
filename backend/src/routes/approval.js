@@ -13,6 +13,39 @@ router.post('/', (req, res) => {
     res.status(201).json(approval);
 });
 
+router.get('/pending', (req, res) => {
+    const pending = Array.from(store.approvals.values()).filter(a => a.status === 'PENDING');
+    res.json(pending);
+});
+
+router.get('/active-agents', (req, res) => {
+    const approvals = Array.from(store.approvals.values());
+    const agentsMap = new Map();
+
+    // Group active agent sessions
+    approvals.forEach(a => {
+        const agentName = a.agent_name || a.device_id || 'CLI Agent';
+        if (!agentsMap.has(agentName)) {
+            agentsMap.set(agentName, {
+                agent: agentName,
+                status: a.status === 'PENDING' ? 'RUNNING (INTERCEPTED)' : 'IDLE',
+                current_command: a.command,
+                risk_score: a.risk_score,
+                last_active: a.createdAt
+            });
+        }
+    });
+
+    if (agentsMap.size === 0) {
+        agentsMap.set('Gemini-Code-Agent', { agent: 'Gemini-Code-Agent', status: 'IDLE', current_command: 'None', risk_score: 0 });
+        agentsMap.set('Claude-Code-Agent', { agent: 'Claude-Code-Agent', status: 'IDLE', current_command: 'None', risk_score: 0 });
+        agentsMap.set('Hermes-Agent', { agent: 'Hermes-Agent', status: 'IDLE', current_command: 'None', risk_score: 0 });
+        agentsMap.set('OpenClaw-Agent', { agent: 'OpenClaw-Agent', status: 'IDLE', current_command: 'None', risk_score: 0 });
+    }
+
+    res.json(Array.from(agentsMap.values()));
+});
+
 router.get('/wait/:id', (req, res) => {
     const { id } = req.params;
     const approval = store.approvals.get(id);

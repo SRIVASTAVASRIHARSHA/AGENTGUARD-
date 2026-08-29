@@ -1,12 +1,10 @@
 package com.agentguard.auth
 
 import android.content.Context
+import android.util.Base64
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import java.security.KeyPairGenerator
-import java.security.KeyStore
-import java.security.Signature
-import android.util.Base64
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 
 class KeyManager(context: Context) {
     private val masterKey = MasterKey.Builder(context)
@@ -20,10 +18,29 @@ class KeyManager(context: Context) {
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
-    
-    // We'll use bouncycastle or native java security for ed25519 in crypto.kt
-    // For now mock signatures as we don't have a reliable nacl port here without complex setup
-    fun signApproval(requestId: String, status: String): String {
-        return Crypto.signData("$requestId:$status", "mock_private_key")
+
+    private fun ensureKeys() {
+        if (!sharedPrefs.contains(PRIVATE)) {
+            val privateKey = Ed25519PrivateKeyParameters(org.bouncycastle.crypto.prng.FixedSecureRandom())
+            sharedPrefs.edit()
+                .putString(PRIVATE, Base64.encodeToString(privateKey.encoded, Base64.NO_WRAP))
+                .putString(PUBLIC, Base64.encodeToString(privateKey.generatePublicKey().encoded, Base64.NO_WRAP))
+                .apply()
+        }
+    }
+
+    fun publicKeyBase64(): String {
+        ensureKeys()
+        return sharedPrefs.getString(PUBLIC, null)!!
+    }
+
+    fun signApproval(requestId: String, status: String, timestamp: Long): String {
+        ensureKeys()
+        return Crypto.signData(Crypto.canonicalApproval(requestId, status, timestamp), sharedPrefs.getString(PRIVATE, null)!!)
+    }
+
+    companion object {
+        private const val PRIVATE = "ed25519_private"
+        private const val PUBLIC = "ed25519_public"
     }
 }

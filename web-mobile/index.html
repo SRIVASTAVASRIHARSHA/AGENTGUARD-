@@ -421,11 +421,6 @@
     let currentRequestId = null;
     let approvedCount = 0;
     let deniedCount = 0;
-    let auditLog = [
-      { command: "git push --force origin main", agent: "Gemini-Code-Agent", status: "DENIED", time: "10m ago" },
-      { command: "npm publish --access public", agent: "Claude-Code-Agent", status: "APPROVED", time: "1h ago" },
-      { command: "rm -rf /var/log/app.log", agent: "Hermes-Agent", status: "DENIED", time: "3h ago" }
-    ];
 
     function switchTab(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -603,30 +598,8 @@
       pollRelayServer();
     }
 
-    function renderAuditLog() {
-      const container = document.getElementById("audit-list");
-      if (!container) return;
-      container.innerHTML = auditLog.map(item => `
-        <div class="history-item">
-          <div class="history-info">
-            <div class="history-cmd">${item.command}</div>
-            <div class="history-time">${item.agent} • ${item.time}</div>
-          </div>
-          <span class="agent-status ${item.status === 'DENIED' ? 'intercepted' : ''}">${item.status}</span>
-        </div>
-      `).join('');
-    }
-
-    async function panicStop() {
-      try {
-        await fetch(`${RELAY_ORIGIN}/api/v1/agents/stop-all`, { method: "POST" });
-      } catch(e) {}
-      alert("Emergency panic signal sent!");
-    }
-
     setInterval(pollRelayServer, 1500);
     pollRelayServer();
-    renderAuditLog();
   </script>
 </body>
 </html>

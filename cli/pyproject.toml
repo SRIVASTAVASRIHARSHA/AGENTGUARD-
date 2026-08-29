@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentguard"
+version = "0.1.0"
+description = "AgentGuard CLI and Risk Engine"
+dependencies = [
+    "pynacl",
+    "requests",
+    "websockets"
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio"
+]
+
+[project.scripts]
+agentguard = "agentguard.agentguard_cli:main"

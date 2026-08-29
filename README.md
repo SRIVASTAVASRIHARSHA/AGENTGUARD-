@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/whysooraj/AGENTGUARD-/releases/latest"><img src="https://img.shields.io/badge/Download%20APK-v1.0.0--debug-38ef7d?style=for-the-badge&logo=android" alt="Download APK"></a>
   <a href="#-key-features"><img src="https://img.shields.io/badge/Security-Zero--Trust-00f2fe?style=for-the-badge&logo=shield" alt="Zero Trust"></a>
   <a href="#-crypto--verification"><img src="https://img.shields.io/badge/Crypto-Ed25519-4facfe?style=for-the-badge&logo=letsencrypt" alt="Ed25519"></a>
   <a href="#-getting-started"><img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Node%20%7C%20Android-38ef7d?style=for-the-badge&logo=android" alt="Platforms"></a>

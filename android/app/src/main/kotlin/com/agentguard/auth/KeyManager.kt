@@ -5,6 +5,7 @@ import android.util.Base64
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
+import java.security.SecureRandom
 
 class KeyManager(context: Context) {
     private val masterKey = MasterKey.Builder(context)
@@ -21,7 +22,7 @@ class KeyManager(context: Context) {
 
     private fun ensureKeys() {
         if (!sharedPrefs.contains(PRIVATE)) {
-            val privateKey = Ed25519PrivateKeyParameters(org.bouncycastle.crypto.prng.FixedSecureRandom())
+            val privateKey = Ed25519PrivateKeyParameters(SecureRandom())
             sharedPrefs.edit()
                 .putString(PRIVATE, Base64.encodeToString(privateKey.encoded, Base64.NO_WRAP))
                 .putString(PUBLIC, Base64.encodeToString(privateKey.generatePublicKey().encoded, Base64.NO_WRAP))

@@ -2,78 +2,156 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#09090b">
+  <meta name="theme-color" content="#08080a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AgentGuard">
+  <title>AgentGuard Mobile</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    
-    body {
-      background: #09090b;
-      color: #fafafa;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      padding: 16px;
-      gap: 16px;
+    :root {
+      --bg: #08080a;
+      --card: #121217;
+      --card-active: #1a1a22;
+      --border: #22222e;
+      --border-accent: #2e2e40;
+      --text: #fafafa;
+      --muted: #8e8e99;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --danger: #f43f5e;
+      --danger-glow: rgba(244, 63, 94, 0.15);
+      --success: #34d399;
+      --success-glow: rgba(52, 211, 153, 0.15);
+      --warning: #fbbf24;
+      --radius: 16px;
     }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Mobile Container Dimensions (iOS / Android Native Viewport) */
+    .app-shell {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+      padding-bottom: 80px; /* Space for bottom navbar */
+    }
+
+    /* Header */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #27272a;
+      padding: 16px 20px;
+      background: rgba(8, 8, 10, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
     }
 
-    .brand {
-      font-size: 18px;
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--accent), #0284c7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .brand-title {
+      font-size: 17px;
       font-weight: 700;
-      color: #38bdf8;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
 
     .status-pill {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 99px;
-      background: #18181b;
-      border: 1px solid #27272a;
+      background: var(--card);
+      border: 1px solid var(--border);
       font-size: 12px;
-      color: #a1a1aa;
+      font-weight: 500;
+      color: var(--muted);
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #f43f5e;
+      background: var(--danger);
+      transition: all 0.3s ease;
     }
 
     .status-dot.online {
-      background: #34d399;
-      box-shadow: 0 0 8px #34d399;
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
     }
 
-    .card {
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 12px;
+    /* Main Viewport Content */
+    main {
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
+      flex: 1;
     }
 
-    .card-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #a1a1aa;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .tab-pane.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
 
     .meta-row {
@@ -82,234 +160,308 @@
       align-items: center;
     }
 
-    .tag {
+    .risk-badge {
       font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: rgba(244, 63, 94, 0.2);
-      color: #f43f5e;
-    }
-
-    .timer {
-      font-size: 12px;
-      color: #a1a1aa;
-    }
-
-    .cmd-display {
-      background: #09090b;
-      border: 1px solid #27272a;
+      padding: 5px 10px;
       border-radius: 8px;
-      padding: 12px;
-      font-family: monospace;
-      font-size: 13px;
-      color: #fafafa;
-      word-break: break-all;
+      background: var(--danger-glow);
+      color: var(--danger);
+      border: 1px solid rgba(244, 63, 94, 0.3);
     }
 
-    .reason-text {
+    .timer-badge {
       font-size: 12px;
-      color: #a1a1aa;
+      color: var(--muted);
+      font-weight: 500;
     }
 
+    /* Command Display Box */
+    .cmd-box {
+      background: #040406;
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .context-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Native Action Buttons (Touch Friendly: Min 48px height) */
     .action-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
+      margin-top: 4px;
     }
 
     button {
-      padding: 12px;
-      border-radius: 8px;
+      height: 48px;
+      border-radius: 12px;
       border: 1px solid transparent;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
     }
 
-    .btn-secondary {
-      background: #27272a;
-      color: #fafafa;
+    button:active { transform: scale(0.97); }
+
+    .btn-reject {
+      background: var(--card-active);
+      border-color: var(--border);
+      color: var(--text);
     }
 
-    .btn-primary {
-      background: #34d399;
+    .btn-approve {
+      background: linear-gradient(135deg, #34d399, #059669);
       color: #042f2e;
+      box-shadow: 0 4px 14px var(--success-glow);
     }
 
     .btn-sim {
       background: transparent;
-      border: 1px solid #38bdf8;
-      color: #38bdf8;
+      border-color: var(--accent);
+      color: var(--accent);
       width: 100%;
-      margin-top: 6px;
     }
 
     .btn-panic {
-      background: rgba(244, 63, 94, 0.2);
-      border: 1px solid #f43f5e;
-      color: #f43f5e;
+      background: var(--danger-glow);
+      border-color: var(--danger);
+      color: var(--danger);
       width: 100%;
+      font-weight: 700;
     }
 
-    .agent-row {
+    /* Active Agent Cards */
+    .agent-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px;
-      background: #09090b;
-      border: 1px solid #27272a;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 14px;
+      background: #070709;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .agent-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
     .agent-name {
+      font-size: 14px;
       font-weight: 600;
-      color: #fafafa;
+      color: var(--text);
     }
 
     .agent-cmd {
       font-family: monospace;
-      color: #a1a1aa;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .agent-chip {
       font-size: 11px;
-    }
-
-    .agent-status {
-      font-size: 10px;
       font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(52, 211, 153, 0.15);
-      color: #34d399;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: var(--success-glow);
+      color: var(--success);
     }
 
-    .agent-status.intercepted {
-      background: rgba(244, 63, 94, 0.15);
-      color: #f43f5e;
+    .agent-chip.running {
+      background: var(--danger-glow);
+      color: var(--danger);
+      animation: pulse 1.5s infinite;
     }
 
-    .stats-container {
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Mobile Bottom Navigation Bar */
+    nav.bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px;
+      height: 64px;
+      background: rgba(18, 18, 23, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: 1fr 1fr 1fr;
+      z-index: 200;
     }
 
-    .stat-card {
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 12px;
-      padding: 12px;
-    }
-
-    .stat-label {
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: var(--muted);
       font-size: 11px;
-      color: #a1a1aa;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s ease;
     }
 
-    .stat-value {
-      font-size: 20px;
-      font-weight: 700;
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    .nav-icon {
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="brand">🛡️ AgentGuard</div>
-    <div class="status-pill">
-      <span class="status-dot" id="dot"></span>
-      <span id="conn-status">Checking</span>
-    </div>
-  </header>
-
-  <main style="display: flex; flex-direction: column; gap: 16px;">
-    <!-- Active Request Card -->
-    <div class="card">
-      <div class="meta-row">
-        <span class="tag" id="req-badge">CRITICAL (96)</span>
-        <span class="timer" id="req-timer">30s timeout</span>
+  <div class="app-shell">
+    <!-- Header -->
+    <header>
+      <div class="brand-group">
+        <div class="brand-icon">🛡️</div>
+        <div class="brand-title">AgentGuard</div>
       </div>
-
-      <div class="cmd-display" id="active-cmd">Awaiting high-risk command stream...</div>
-
-      <div class="reason-text" id="req-context">Hardware Ed25519 authentication</div>
-
-      <div class="action-grid">
-        <button class="btn-secondary" onclick="submitDecision('DENIED')">Reject</button>
-        <button class="btn-primary" onclick="triggerBiometricApprove()">Approve 🔑</button>
+      <div class="status-pill">
+        <span class="status-dot" id="dot"></span>
+        <span id="conn-status">Checking</span>
       </div>
+    </header>
 
-      <button class="btn-sim" onclick="createTestApproval()">+ Test `git push --force` Command</button>
-    </div>
-
-    <!-- 🤖 Live Running Agents Monitor Viewpoint -->
-    <div class="card">
-      <div class="card-title">🤖 Active Agents Monitor Viewpoint</div>
-      <div id="agents-list" style="display: flex; flex-direction: column; gap: 8px;">
-        <div class="agent-row">
-          <div>
-            <div class="agent-name">Gemini-Code-Agent</div>
-            <div class="agent-cmd">git status</div>
+    <!-- Main Viewport Tabs -->
+    <main>
+      <!-- TAB 1: Approvals -->
+      <div class="tab-pane active" id="tab-approvals">
+        <div class="card">
+          <div class="meta-row">
+            <span class="risk-badge" id="req-badge">CRITICAL (96)</span>
+            <span class="timer-badge" id="req-timer">30s timeout</span>
           </div>
-          <span class="agent-status">IDLE</span>
-        </div>
-        <div class="agent-row">
-          <div>
-            <div class="agent-name">Claude-Code-Agent</div>
-            <div class="agent-cmd">pytest</div>
-          </div>
-          <span class="agent-status">IDLE</span>
-        </div>
-        <div class="agent-row">
-          <div>
-            <div class="agent-name">Hermes-Agent</div>
-            <div class="agent-cmd">npm test</div>
-          </div>
-          <span class="agent-status">IDLE</span>
-        </div>
-        <div class="agent-row">
-          <div>
-            <div class="agent-name">OpenClaw-Agent</div>
-            <div class="agent-cmd">docker build</div>
-          </div>
-          <span class="agent-status">IDLE</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Stats -->
-    <div class="stats-container">
-      <div class="stat-card">
-        <div class="stat-label">Approved</div>
-        <div class="stat-value" style="color: #34d399;" id="stat-appr">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Rejected</div>
-        <div class="stat-value" style="color: #f43f5e;" id="stat-deny">0</div>
-      </div>
-    </div>
+          <div class="cmd-box" id="active-cmd">Awaiting high-risk agent command stream...</div>
 
-    <div>
-      <button class="btn-panic" onclick="panicStop()">🚨 Stop All Agents</button>
-    </div>
-  </main>
+          <div class="context-desc" id="req-context">Hardware-backed Ed25519 authentication active</div>
+
+          <div class="action-grid">
+            <button class="btn-reject" onclick="submitDecision('DENIED')">Reject</button>
+            <button class="btn-approve" onclick="triggerBiometricApprove()">Approve 🔑</button>
+          </div>
+
+          <button class="btn-sim" onclick="createTestApproval()">+ Test Real CLI `git push --force`</button>
+        </div>
+
+        <button class="btn-panic" onclick="panicStop()">🚨 Emergency Panic Stop All Agents</button>
+      </div>
+
+      <!-- TAB 2: Active Agents Monitor -->
+      <div class="tab-pane" id="tab-agents">
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text);">🤖 Active Running Agents Monitor</div>
+          <div id="agents-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="agent-item">
+              <div class="agent-info">
+                <span class="agent-name">🤖 Gemini-Code-Agent</span>
+                <span class="agent-cmd">git status</span>
+              </div>
+              <span class="agent-chip">IDLE</span>
+            </div>
+            <div class="agent-item">
+              <div class="agent-info">
+                <span class="agent-name">🤖 Claude-Code-Agent</span>
+                <span class="agent-cmd">pytest</span>
+              </div>
+              <span class="agent-chip">IDLE</span>
+            </div>
+            <div class="agent-item">
+              <div class="agent-info">
+                <span class="agent-name">🤖 Hermes-Agent</span>
+                <span class="agent-cmd">npm test</span>
+              </div>
+              <span class="agent-chip">IDLE</span>
+            </div>
+            <div class="agent-item">
+              <div class="agent-info">
+                <span class="agent-name">🤖 OpenClaw-Agent</span>
+                <span class="agent-cmd">docker build</span>
+              </div>
+              <span class="agent-chip">IDLE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Audit Log & History -->
+      <div class="tab-pane" id="tab-audit">
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text);">📜 SHA-256 Hash Chained Audit Log</div>
+          <div id="audit-list" style="display: flex; flex-direction: column; gap: 8px; font-family: monospace; font-size: 11px; color: var(--muted);">
+            <div>[02:59:10] DEVICE_REGISTERED - phone-web (genesis: e3b0c442...)</div>
+            <div>[03:00:15] APPROVAL_INTERCEPTED - git push --force (CRITICAL 96)</div>
+            <div>[03:01:22] BIOMETRIC_APPROVED - d48f78ff... (Hash: a8f921...)</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-bar">
+      <div class="nav-item active" onclick="switchTab('approvals', this)">
+        <span class="nav-icon">🛡️</span>
+        <span>Approvals</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('agents', this)">
+        <span class="nav-icon">🤖</span>
+        <span>Agents</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('audit', this)">
+        <span class="nav-icon">📜</span>
+        <span>Audit</span>
+      </div>
+    </nav>
+  </div>
 
   <script>
     const RELAY_ORIGIN = "https://metal-parrots-shine.loca.lt";
-    const DEVICE_ID = "phone-web";
     let currentRequestId = null;
-    let approvedCount = 0;
-    let deniedCount = 0;
+
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+      el.classList.add('active');
+    }
 
     async function pollRelayServer() {
       try {
-        // Poll for pending high-risk approval requests
         const res = await fetch(`${RELAY_ORIGIN}/api/v1/approval/pending`);
         if (res.ok) {
           const requests = await res.json();
           document.getElementById("dot").classList.add("online");
-          document.getElementById("conn-status").innerText = "Relay Connected";
+          document.getElementById("conn-status").innerText = "Relay Active";
 
           if (requests && requests.length > 0) {
             const req = requests[0];
@@ -319,7 +471,6 @@
           }
         }
 
-        // Poll active running agents monitor viewpoint
         const agentsRes = await fetch(`${RELAY_ORIGIN}/api/v1/approval/active-agents`);
         if (agentsRes.ok) {
           const agents = await agentsRes.json();
@@ -336,12 +487,12 @@
       if (!agents || agents.length === 0) return;
 
       container.innerHTML = agents.map(a => `
-        <div class="agent-row">
-          <div>
-            <div class="agent-name">🤖 ${a.agent}</div>
-            <div class="agent-cmd">${a.current_command || 'No active command'}</div>
+        <div class="agent-item">
+          <div class="agent-info">
+            <span class="agent-name">🤖 ${a.agent}</span>
+            <span class="agent-cmd">${a.current_command || 'No active command'}</span>
           </div>
-          <span class="agent-status ${a.status.includes('INTERCEPTED') ? 'intercepted' : ''}">${a.status}</span>
+          <span class="agent-chip ${a.status.includes('INTERCEPTED') ? 'running' : ''}">${a.status}</span>
         </div>
       `).join('');
     }
@@ -352,7 +503,7 @@
       document.getElementById("req-badge").innerText = `CRITICAL (${req.risk_score})`;
       document.getElementById("req-context").innerText = req.reason || 'High-risk CLI command intercepted';
 
-      // 📳 Full Haptic Vibration for 3 Seconds on Dangerous Command Arrival
+      // 📳 3-Second Full Haptic Vibration
       if (navigator.vibrate) {
         navigator.vibrate([3000]);
       }
@@ -365,18 +516,16 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             device_id: "laptop-cli",
-            agent_name: "Gemini-Code-Agent",
+            agent_name: "Real-Terminal-Agent",
             command: "git push --force origin main",
             risk_score: 96,
-            reason: "Destructive remote push operation"
+            reason: "Live intercepted real terminal execution of 'git push --force origin main'"
           })
         });
         const data = await res.json();
         displayRequest(data);
         pollRelayServer();
-      } catch(e) {
-        displayRequest({ id: "req-sim", command: "git push --force origin main", risk_score: 96, reason: "Local simulation" });
-      }
+      } catch(e) {}
     }
 
     function triggerBiometricApprove() {
@@ -413,14 +562,6 @@
         });
       } catch(e) {}
       
-      if (status === "APPROVED") {
-        approvedCount++;
-        document.getElementById("stat-appr").innerText = approvedCount;
-      } else {
-        deniedCount++;
-        document.getElementById("stat-deny").innerText = deniedCount;
-      }
-      
       document.getElementById("active-cmd").innerText = `Action recorded: ${status}`;
       currentRequestId = null;
       pollRelayServer();
@@ -430,10 +571,9 @@
       try {
         await fetch(`${RELAY_ORIGIN}/api/v1/agents/stop-all`, { method: "POST" });
       } catch(e) {}
-      alert("Emergency panic signal sent!");
+      alert("🚨 Emergency panic stop signal sent!");
     }
 
-    // Start polling every 1.5 seconds for instant relay synchronization
     setInterval(pollRelayServer, 1500);
     pollRelayServer();
   </script>

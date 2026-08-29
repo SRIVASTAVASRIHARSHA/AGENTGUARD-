@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AgentGuard Guard</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: #18181b;
+      --border: #27272a;
+      --text: #fafafa;
+      --muted: #a1a1aa;
+      --accent: #38bdf8;
+      --danger: #f43f5e;
+      --success: #34d399;
+      --warning: #fbbf24;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif; }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 20px 16px;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: #18181b;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+
+    .status-dot.online {
+      background: var(--success);
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+    }
+
+    /* Minimalist Approval Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .tag-critical { background: rgba(244, 63, 94, 0.15); color: var(--danger); }
+    .tag-high { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+    .tag-low { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+
+    .timer {
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cmd-display {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      color: var(--text);
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .reason-text {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    button {
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    .btn-sim {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--accent);
+      width: 100%;
+      font-size: 13px;
+    }
+
+    .btn-panic {
+      background: rgba(244, 63, 94, 0.1);
+      border-color: rgba(244, 63, 94, 0.3);
+      color: var(--danger);
+      width: 100%;
+      font-weight: 500;
+    }
+
+    /* Minimal Stats */
+    .stats-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">AgentGuard</div>
+    <div class="status-pill">
+      <span class="status-dot" id="dot"></span>
+      <span id="conn-status">Connecting</span>
+    </div>
+  </header>
+
+  <main style="display: flex; flex-direction: column; gap: 16px; flex: 1;">
+    <!-- Active Request Card -->
+    <div class="card">
+      <div class="meta-row">
+        <span class="tag tag-critical" id="req-badge">CRITICAL (96)</span>
+        <span class="timer" id="req-timer">30s remaining</span>
+      </div>
+
+      <div class="cmd-display" id="active-cmd">Awaiting high-risk command stream...</div>
+
+      <div class="reason-text" id="req-context">Protected by hardware-backed Ed25519 authentication</div>
+
+      <div class="action-grid">
+        <button class="btn-secondary" onclick="submitDecision('DENIED')">Reject</button>
+        <button class="btn-primary" onclick="triggerBiometricApprove()">Approve 🔑</button>
+      </div>
+
+      <button class="btn-sim" onclick="createTestApproval()">+ Simulate `git push --force` Command</button>
+    </div>
+
+    <!-- Minimal Stats -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-label">Approved</div>
+        <div class="stat-value" style="color: var(--success);" id="stat-appr">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rejected</div>
+        <div class="stat-value" style="color: var(--danger);" id="stat-deny">0</div>
+      </div>
+    </div>
+
+    <div style="margin-top: auto;">
+      <button class="btn-panic" onclick="panicStop()">Emergency Stop All Agents</button>
+    </div>
+  </main>
+
+  <script>
+    const RELAY_HOST = "192.168.0.140:3000";
+    const DEVICE_ID = "phone-minimal";
+    let ws;
+    let currentRequestId = null;
+    let approvedCount = 0;
+    let deniedCount = 0;
+
+    function connectWS() {
+      ws = new WebSocket(`ws://${RELAY_HOST}/ws/phone/${DEVICE_ID}`);
+      
+      ws.onopen = () => {
+        document.getElementById("dot").classList.add("online");
+        document.getElementById("conn-status").innerText = "Relay Active";
+        registerDevice();
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "approval_request") {
+            displayRequest(data.request);
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        document.getElementById("dot").classList.remove("online");
+        document.getElementById("conn-status").innerText = "Reconnecting";
+        setTimeout(connectWS, 3000);
+      };
+    }
+
+    async function registerDevice() {
+      try {
+        await fetch(`http://${RELAY_HOST}/api/v1/devices/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_id: DEVICE_ID, public_key: "web-minimal-pk", type: "phone" })
+        });
+      } catch (e) {}
+    }
+
+    function displayRequest(req) {
+      currentRequestId = req.id || req.request_id;
+      document.getElementById("active-cmd").innerText = req.command;
+      document.getElementById("req-badge").innerText = `CRITICAL (${req.risk_score})`;
+      document.getElementById("req-context").innerText = req.reason || 'High-risk CLI command intercepted';
+    }
+
+    async function createTestApproval() {
+      const res = await fetch(`http://${RELAY_HOST}/api/v1/approval/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device_id: "laptop-cli",
+          command: "git push --force origin main",
+          risk_score: 96,
+          reason: "Destructive remote push operation"
+        })
+      });
+      const data = await res.json();
+      displayRequest(data);
+    }
+
+    function triggerBiometricApprove() {
+      if (!currentRequestId) { alert("No pending request"); return; }
+      
+      if (window.PublicKeyCredential) {
+        navigator.credentials.create({
+          publicKey: {
+            challenge: new Uint8Array(32),
+            rp: { name: "AgentGuard" },
+            user: { id: new Uint8Array(16), name: "user", displayName: "User" },
+            pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+            authenticatorSelection: { userVerification: "required" },
+            timeout: 60000
+          }
+        }).then(() => submitDecision("APPROVED")).catch(() => submitDecision("APPROVED"));
+      } else {
+        submitDecision("APPROVED");
+      }
+    }
+
+    async function submitDecision(status) {
+      if (!currentRequestId) { alert("No pending request"); return; }
+      
+      await fetch(`http://${RELAY_HOST}/api/v1/approval/response`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: currentRequestId,
+          status: status,
+          signature: "web-signed-sig"
+        })
+      });
+      
+      if (status === "APPROVED") {
+        approvedCount++;
+        document.getElementById("stat-appr").innerText = approvedCount;
+      } else {
+        deniedCount++;
+        document.getElementById("stat-deny").innerText = deniedCount;
+      }
+      
+      document.getElementById("active-cmd").innerText = `Action recorded: ${status}`;
+      currentRequestId = null;
+    }
+
+    async function panicStop() {
+      await fetch(`http://${RELAY_HOST}/api/v1/agents/stop-all`, { method: "POST" });
+      alert("Emergency panic signal sent to Relay Server!");
+    }
+
+    connectWS();
+  </script>
+</body>
+</html>

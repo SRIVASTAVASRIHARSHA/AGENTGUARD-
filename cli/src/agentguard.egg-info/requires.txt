@@ -1,0 +1,7 @@
+pynacl
+requests
+websockets
+
+[dev]
+pytest
+pytest-asyncio

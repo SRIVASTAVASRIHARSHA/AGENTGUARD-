@@ -1,2 +1,6 @@
 # gitignore
 AgentGuard_*.md
+backend/certs/*.key
+backend/certs/*.csr
+backend/certs/*.srl
+backend/certs/server.crt

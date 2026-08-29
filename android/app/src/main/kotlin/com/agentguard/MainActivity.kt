@@ -1,12 +1,16 @@
 package com.agentguard
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.provider.Settings
 import androidx.activity.compose.setContent
+import androidx.biometric.BiometricPrompt
+import androidx.fragment.app.FragmentActivity
+import com.agentguard.auth.BiometricAuthManager
+import com.agentguard.auth.KeyManager
+import com.agentguard.services.ApprovalRequest
+import com.agentguard.services.CloudService
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,14 +22,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+    private lateinit var cloud: CloudService
+    private lateinit var biometric: BiometricAuthManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val keyManager = KeyManager(this)
+        cloud = CloudService(this, BuildConfig.RELAY_URL, BuildConfig.AGENTGUARD_TOKEN, keyManager)
+        biometric = BiometricAuthManager(this)
+        val phoneId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+
         setContent {
-            AgentGuardTheme {
-                AppMainScreen()
-            }
+            AgentGuardTheme { AppMainScreen(cloud, biometric, phoneId) }
         }
+    }
+
+    override fun onDestroy() {
+        if (::cloud.isInitialized) cloud.close()
+        super.onDestroy()
     }
 }
 
@@ -33,248 +48,78 @@ class MainActivity : ComponentActivity() {
 fun AgentGuardTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            background = Color(0xFF09090B),
-            surface = Color(0xFF18181B),
-            primary = Color(0xFF38BDF8),
-            error = Color(0xFFF43F5E),
-            onBackground = Color(0xFFFAFAFA)
-        ),
-        content = content
+            background = Color(0xFF09090B), surface = Color(0xFF18181B),
+            primary = Color(0xFF38BDF8), error = Color(0xFFF43F5E), onBackground = Color.White
+        ), content = content
     )
 }
 
-data class PendingCommand(
-    val id: String,
-    val command: String,
-    val riskScore: Int,
-    val reason: String
-)
+data class PendingCommand(val id: String, val command: String, val riskScore: Int, val level: String, val reason: String)
 
 @Composable
-fun AppMainScreen() {
-    var selectedTab by remember { mutableStateOf(0) }
-    var pendingCommand by remember { 
-        mutableStateOf<PendingCommand?>(
-            PendingCommand("req-1", "git push --force origin main", 96, "Destructive remote push operation")
-        ) 
+fun AppMainScreen(cloud: CloudService, biometric: BiometricAuthManager, phoneId: String) {
+    var pending by remember { mutableStateOf<PendingCommand?>(null) }
+    var connected by remember { mutableStateOf(false) }
+    var approved by remember { mutableStateOf(0) }
+    var rejected by remember { mutableStateOf(0) }
+
+    DisposableEffect(Unit) {
+        cloud.connectWebSocket(phoneId, { req: ApprovalRequest ->
+            pending = PendingCommand(req.requestId, req.command, req.riskScore, req.level, req.reason)
+        }, { ok -> connected = ok })
+        onDispose { cloud.close() }
     }
-    var approvedCount by remember { mutableStateOf(0) }
-    var deniedCount by remember { mutableStateOf(0) }
-    var isConnected by remember { mutableStateOf(true) }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF09090B)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🛡️ AgentGuard",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF38BDF8)
-                )
-                Surface(
-                    shape = RoundedCornerShape(50.dp),
-                    color = Color(0xFF18181B),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    if (isConnected) Color(0xFF34D399) else Color(0xFFF43F5E),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                        )
-                        Text(
-                            text = if (isConnected) "Relay Active" else "Disconnected",
-                            fontSize = 12.sp,
-                            color = Color(0xFFA1A1AA)
-                        )
-                    }
+    Column(Modifier.fillMaxSize().background(Color(0xFF09090B)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("🛡️ AgentGuard", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+            Text(if (connected) "● Secure Relay" else "● Disconnected", color = if (connected) Color(0xFF34D399) else Color(0xFFF43F5E), fontSize = 12.sp)
+        }
+
+        Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(Color(0xFF18181B))) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val item = pending
+                Text(item?.let { "🚨 ${it.level} · ${it.riskScore}/100" } ?: "Waiting for an intercepted agent command", color = if (item != null) Color(0xFFF43F5E) else Color(0xFFA1A1AA), fontWeight = FontWeight.Bold)
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), color = Color(0xFF09090B)) {
+                    Text(item?.command ?: "No pending approval", Modifier.padding(12.dp), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = Color.White)
                 }
-            }
+                Text(item?.reason ?: "TLS + device-authenticated approval channel", fontSize = 12.sp, color = Color(0xFFA1A1AA))
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Active Approval Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF18181B)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color(0x26F43F5E)
-                            ) {
-                                Text(
-                                    text = pendingCommand?.let { "CRITICAL (${it.riskScore})" } ?: "IDLE",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    color = Color(0xFFF43F5E),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Text(
-                                text = "30s timeout",
-                                fontSize = 12.sp,
-                                color = Color(0xFFA1A1AA)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = {
+                        item?.let {
+                            cloud.sendApproval(it.id, "DENIED")
+                            rejected++
+                            pending = null
+                        }
+                    }, Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27272A))) { Text("Reject") }
+
+                    Button(onClick = {
+                        item?.let { action ->
+                            biometric.authenticate(
+                                onSuccess = {
+                                    cloud.sendApproval(action.id, "APPROVED")
+                                    approved++
+                                    pending = null
+                                },
+                                onError = { }
                             )
                         }
-
-                        // Command display box
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF09090B),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A))
-                        ) {
-                            Text(
-                                text = pendingCommand?.command ?: "Awaiting agent command stream...",
-                                modifier = Modifier.padding(12.dp),
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 13.sp,
-                                color = Color(0xFFFAFAFA)
-                            )
-                        }
-
-                        Text(
-                            text = pendingCommand?.reason ?: "Hardware Ed25519 authentication",
-                            fontSize = 12.sp,
-                            color = Color(0xFFA1A1AA)
-                        )
-
-                        // Action Buttons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    if (pendingCommand != null) {
-                                        deniedCount++
-                                        pendingCommand = null
-                                    }
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27272A))
-                            ) {
-                                Text("Reject", color = Color(0xFFFAFAFA), fontWeight = FontWeight.SemiBold)
-                            }
-
-                            Button(
-                                onClick = {
-                                    if (pendingCommand != null) {
-                                        approvedCount++
-                                        pendingCommand = null
-                                    }
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34D399))
-                            ) {
-                                Text("Approve 🔑", color = Color(0xFF042F2E), fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                pendingCommand = PendingCommand(
-                                    "req-${System.currentTimeMillis()}",
-                                    "git push --force origin main",
-                                    96,
-                                    "Destructive remote push operation"
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8))
-                        ) {
-                            Text("+ Simulate `git push --force` Command", color = Color(0xFF38BDF8), fontSize = 13.sp)
-                        }
-                    }
+                    }, Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34D399))) { Text("Approve 🔐", color = Color(0xFF042F2E), fontWeight = FontWeight.Bold) }
                 }
-
-                // Stats Cards
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF18181B)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Approved", fontSize = 11.sp, color = Color(0xFFA1A1AA))
-                            Text("$approvedCount", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34D399))
-                        }
-                    }
-
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF18181B)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Rejected", fontSize = 11.sp, color = Color(0xFFA1A1AA))
-                            Text("$deniedCount", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF43F5E))
-                        }
-                    }
-                }
-            }
-
-            // Panic Stop Button
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0x33F43F5E)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF43F5E))
-            ) {
-                Text("🚨 Emergency Stop All Agents", color = Color(0xFFF43F5E), fontWeight = FontWeight.Bold)
             }
         }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatCard("Approved", approved, Color(0xFF34D399), Modifier.weight(1f))
+            StatCard("Rejected", rejected, Color(0xFFF43F5E), Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun StatCard(title: String, value: Int, color: Color, modifier: Modifier) {
+    Card(modifier, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(Color(0xFF18181B))) {
+        Column(Modifier.padding(12.dp)) { Text(title, fontSize = 11.sp, color = Color(0xFFA1A1AA)); Text("$value", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = color) }
     }
 }

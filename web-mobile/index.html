@@ -270,6 +270,12 @@
       document.getElementById("active-cmd").innerText = req.command;
       document.getElementById("req-badge").innerText = `CRITICAL (${req.risk_score})`;
       document.getElementById("req-context").innerText = req.reason || 'High-risk CLI command intercepted';
+
+      // 📳 Full Haptic Vibration for 3 Seconds on Dangerous Command Arrival
+      if (navigator.vibrate) {
+        // 3-second continuous pulse vibration pattern: [3000ms vibration]
+        navigator.vibrate([3000]);
+      }
     }
 
     async function createTestApproval() {

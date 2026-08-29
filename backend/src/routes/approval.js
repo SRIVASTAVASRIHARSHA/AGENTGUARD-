@@ -1,29 +1,24 @@
 const express = require('express');
 const store = require('../models/store');
-const { verifySignature } = require('../auth/crypto');
+const phoneHub = require('../ws/phoneHub');
 const router = express.Router();
 
-router.post('/request', (req, res) => {
+function createAndNotify(req, res, code) {
     const approval = store.createApproval(req.body);
-    res.status(202).json(approval);
-});
+    phoneHub.notifyApproval(approval);
+    res.status(code).json(approval);
+}
 
-router.post('/', (req, res) => {
-    const approval = store.createApproval(req.body);
-    res.status(201).json(approval);
-});
+router.post('/request', (req, res) => createAndNotify(req, res, 202));
+router.post('/', (req, res) => createAndNotify(req, res, 201));
 
 router.get('/pending', (req, res) => {
-    const pending = Array.from(store.approvals.values()).filter(a => a.status === 'PENDING');
-    res.json(pending);
+    res.json(Array.from(store.approvals.values()).filter(a => a.status === 'PENDING'));
 });
 
 router.get('/active-agents', (req, res) => {
-    const approvals = Array.from(store.approvals.values());
     const agentsMap = new Map();
-
-    // Group ONLY real live agent sessions dynamically created during runtime
-    approvals.forEach(a => {
+    for (const a of store.approvals.values()) {
         const agentName = a.agent_name || a.device_id || 'CLI Agent';
         agentsMap.set(agentName, {
             agent: agentName,
@@ -32,28 +27,23 @@ router.get('/active-agents', (req, res) => {
             risk_score: a.risk_score,
             last_active: a.createdAt
         });
-    });
-
+    }
     res.json(Array.from(agentsMap.values()));
 });
 
 router.get('/wait/:id', (req, res) => {
-    const { id } = req.params;
-    const approval = store.approvals.get(id);
+    const approval = store.getApproval(req.params.id);
     if (!approval) return res.status(404).json({ error: 'Not found' });
     res.json(approval);
 });
 
 router.post('/response', (req, res) => {
-    const { request_id, status } = req.body;
-    const approval = store.updateApprovalStatus(request_id, status);
+    const approval = store.updateApprovalStatus(req.body.request_id, req.body.status);
     res.json(approval || { status: 'ok' });
 });
 
 router.post('/:id/respond', (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    const approval = store.updateApprovalStatus(id, status);
+    const approval = store.updateApprovalStatus(req.params.id, req.body.status);
     res.json(approval || { status: 'ok' });
 });
 

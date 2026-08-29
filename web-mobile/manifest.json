@@ -1,0 +1,15 @@
+{
+  "short_name": "AgentGuard",
+  "name": "AgentGuard Mobile Guard",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/000000/shield.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/index.html",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "display": "standalone"
+}

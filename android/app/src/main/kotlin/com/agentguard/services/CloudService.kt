@@ -1,9 +1,17 @@
 package com.agentguard.services
 
+import android.content.Context
+import com.agentguard.R
 import com.agentguard.auth.KeyManager
 import com.google.gson.Gson
 import okhttp3.*
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 data class ApprovalRequest(
     val requestId: String,
@@ -15,14 +23,26 @@ data class ApprovalRequest(
 )
 
 class CloudService(
+    context: Context,
     private val relayUrl: String,
     private val token: String,
     private val keyManager: KeyManager
 ) {
-    private val client = OkHttpClient.Builder()
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .build()
+    private val client = buildClient(context)
     private var webSocket: WebSocket? = null
+
+    private fun buildClient(context: Context): OkHttpClient {
+        val cf = CertificateFactory.getInstance("X.509")
+        val cert = context.resources.openRawResource(R.raw.agentguard_ca).use { cf.generateCertificate(it) as X509Certificate }
+        val ks = KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null, null); setCertificateEntry("agentguard-ca", cert) }
+        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(ks) }
+        val trustManager = tmf.trustManagers.filterIsInstance<X509TrustManager>().single()
+        val ssl = SSLContext.getInstance("TLS").apply { init(null, arrayOf(trustManager), null) }
+        return OkHttpClient.Builder()
+            .sslSocketFactory(ssl.socketFactory, trustManager)
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .build()
+    }
 
     fun connectWebSocket(phoneId: String, onRequest: (ApprovalRequest) -> Unit, onConnection: (Boolean) -> Unit) {
         val wsUrl = relayUrl.replaceFirst("https://", "wss://").replaceFirst("http://", "ws://")
@@ -34,49 +54,32 @@ class CloudService(
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 onConnection(true)
-                webSocket.send(Gson().toJson(mapOf(
-                    "type" to "REGISTER_DEVICE",
-                    "public_key" to keyManager.publicKeyBase64()
-                )))
+                webSocket.send(Gson().toJson(mapOf("type" to "REGISTER_DEVICE", "public_key" to keyManager.publicKeyBase64())))
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 try {
                     val root = Gson().fromJson(text, Map::class.java)
-                    if (root["type"] == "APPROVAL_REQUEST") {
-                        val msg = Gson().fromJson(text, ApprovalRequest::class.java)
-                        onRequest(msg)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                    if (root["type"] == "APPROVAL_REQUEST") onRequest(Gson().fromJson(text, ApprovalRequest::class.java))
+                } catch (e: Exception) { e.printStackTrace() }
             }
 
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                onConnection(false)
-            }
-
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                onConnection(false)
-            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { onConnection(false) }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { onConnection(false) }
         })
     }
 
     fun sendApproval(requestId: String, status: String) {
         val timestamp = System.currentTimeMillis()
-        val signature = keyManager.signApproval(requestId, status, timestamp)
         val payload = mapOf(
             "type" to "APPROVAL_RESPONSE",
             "request_id" to requestId,
             "status" to status,
-            "signature" to signature,
+            "signature" to keyManager.signApproval(requestId, status, timestamp),
             "timestamp" to timestamp
         )
         webSocket?.send(Gson().toJson(payload))
     }
 
-    fun close() {
-        webSocket?.close(1000, "closed")
-        webSocket = null
-    }
+    fun close() { webSocket?.close(1000, "closed"); webSocket = null }
 }

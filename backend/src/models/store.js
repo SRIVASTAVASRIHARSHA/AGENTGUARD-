@@ -8,6 +8,13 @@ class Store {
         this.lastHash = crypto.createHash('sha256').update('genesis').digest('hex');
     }
 
+    reset() {
+        this.devices.clear();
+        this.approvals.clear();
+        this.auditLog = [];
+        this.lastHash = crypto.createHash('sha256').update('genesis').digest('hex');
+    }
+
     registerDevice(device) {
         this.devices.set(device.pubKey, device);
         this.appendAuditLog('DEVICE_REGISTERED', device);

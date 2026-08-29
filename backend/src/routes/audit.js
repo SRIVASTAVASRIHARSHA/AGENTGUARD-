@@ -6,4 +6,9 @@ router.get('/', (req, res) => {
     res.json(store.getAuditLogs());
 });
 
+router.post('/clear', (req, res) => {
+    store.reset();
+    res.json({ status: 'cleared' });
+});
+
 module.exports = router;

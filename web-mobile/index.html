@@ -392,9 +392,7 @@
         <div class="card">
           <div style="font-size: 14px; font-weight: 700; color: var(--text);">📜 SHA-256 Hash Chained Audit Log</div>
           <div id="audit-list" style="display: flex; flex-direction: column; gap: 8px; font-family: monospace; font-size: 11px; color: var(--muted);">
-            <div>[02:59:10] DEVICE_REGISTERED - phone-web (genesis: e3b0c442...)</div>
-            <div>[03:00:15] APPROVAL_INTERCEPTED - git push --force (CRITICAL 96)</div>
-            <div>[03:01:22] BIOMETRIC_APPROVED - d48f78ff... (Hash: a8f921...)</div>
+            <div style="font-style: italic;">No audit log events recorded yet...</div>
           </div>
         </div>
       </div>
@@ -458,10 +456,32 @@
           const agents = await agentsRes.json();
           renderActiveAgents(agents);
         }
+
+        const auditRes = await fetch(`${RELAY_ORIGIN}/api/v1/audit`);
+        if (auditRes.ok) {
+          const auditLogs = await auditRes.json();
+          renderAuditLogs(auditLogs);
+        }
       } catch (e) {
         document.getElementById("dot").classList.remove("online");
         document.getElementById("conn-status").innerText = "Connecting...";
       }
+    }
+
+    function renderAuditLogs(logs) {
+      const container = document.getElementById("audit-list");
+      if (!logs || logs.length === 0) {
+        container.innerHTML = `<div style="font-style: italic;">No audit log events recorded yet...</div>`;
+        return;
+      }
+
+      container.innerHTML = logs.slice(-10).reverse().map(l => `
+        <div style="padding: 6px; background: #070709; border: 1px solid var(--border); border-radius: 6px; word-break: break-all;">
+          <span style="color: var(--accent);">[${new Date(l.timestamp).toLocaleTimeString()}]</span> 
+          <span style="color: var(--text); font-weight: 600;">${l.action}</span>
+          <div style="font-size: 10px; color: var(--muted); margin-top: 2px;">Hash: ${l.hash ? l.hash.substring(0, 16) : 'genesis'}...</div>
+        </div>
+      `).join('');
     }
 
     function renderActiveAgents(agents) {

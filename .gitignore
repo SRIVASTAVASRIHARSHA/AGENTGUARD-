@@ -4,3 +4,10 @@ backend/certs/*.key
 backend/certs/*.csr
 backend/certs/*.srl
 backend/certs/server.crt
+
+# Android/Gradle build artifacts
+android/.gradle/
+android/**/build/
+android/local.properties
+*.iml
+.idea/

@@ -417,7 +417,7 @@
 
   <script>
     // ponytail: fallback to current window location if localtunnel fails
-    const RELAY_ORIGIN = (window.location.origin && window.location.origin !== "null" && !window.location.origin.includes("file:")) ? window.location.origin : "http://localhost:3000";
+    const RELAY_ORIGIN = "http://10.156.105.224:3000";
     let currentRequestId = null;
     let approvedCount = 0;
     let deniedCount = 0;

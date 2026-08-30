@@ -64,8 +64,22 @@ class CloudService(
                 } catch (e: Exception) { e.printStackTrace() }
             }
 
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { onConnection(false) }
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { onConnection(false) }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+    android.util.Log.e(
+        "AgentGuard",
+        "WebSocket FAILED: ${t.javaClass.name}: ${t.message}",
+        t
+    )
+
+    if (response != null) {
+        android.util.Log.e(
+            "AgentGuard",
+            "WebSocket response: ${response.code} ${response.message}"
+        )
+    }
+
+    onConnection(false)
+}            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { onConnection(false) }
         })
     }
 

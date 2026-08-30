@@ -47,7 +47,7 @@ class NotificationService(private val context: Context) {
                 )
             } else {
                 @Suppress("DEPRECATION")
-                val vibrator = context.getSystemService(Context.Vibrator::class.java)
+                val vibrator = context.getSystemService(Vibrator::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator?.vibrate(VibrationEffect.createOneShot(3000, VibrationEffect.DEFAULT_AMPLITUDE))
                 } else {

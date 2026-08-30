@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#08080a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AgentGuard">
+  <title>AgentGuard Mobile</title>
+  <style>
+    :root {
+      --bg: #08080a;
+      --card: #121217;
+      --card-active: #1a1a22;
+      --border: #22222e;
+      --border-accent: #2e2e40;
+      --text: #fafafa;
+      --muted: #8e8e99;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --danger: #f43f5e;
+      --danger-glow: rgba(244, 63, 94, 0.15);
+      --success: #34d399;
+      --success-glow: rgba(52, 211, 153, 0.15);
+      --warning: #fbbf24;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Mobile Container Dimensions (iOS / Android Native Viewport) */
+    .app-shell {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+      padding-bottom: 80px; /* Space for bottom navbar */
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: rgba(8, 8, 10, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--accent), #0284c7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.online {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    /* Main Viewport Content */
+    main {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .tab-pane.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .risk-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: var(--danger-glow);
+      color: var(--danger);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .timer-badge {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* Command Display Box */
+    .cmd-box {
+      background: #040406;
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .context-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Native Action Buttons (Touch Friendly: Min 48px height) */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    button {
+      height: 48px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    button:active { transform: scale(0.97); }
+
+    .btn-reject {
+      background: var(--card-active);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-approve {
+      background: linear-gradient(135deg, #34d399, #059669);
+      color: #042f2e;
+      box-shadow: 0 4px 14px var(--success-glow);
+    }
+
+    .btn-sim {
+      background: transparent;
+      border-color: var(--accent);
+      color: var(--accent);
+      width: 100%;
+    }
+
+    .btn-panic {
+      background: var(--danger-glow);
+      border-color: var(--danger);
+      color: var(--danger);
+      width: 100%;
+      font-weight: 700;
+    }
+
+    /* Active Agent Cards */
+    .agent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px;
+      background: #070709;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .agent-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .agent-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .agent-cmd {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .agent-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: var(--success-glow);
+      color: var(--success);
+    }
+
+    .agent-chip.running {
+      background: var(--danger-glow);
+      color: var(--danger);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Mobile Bottom Navigation Bar */
+    nav.bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px;
+      height: 64px;
+      background: rgba(18, 18, 23, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      z-index: 200;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <!-- Header -->
+    <header>
+      <div class="brand-group">
+        <div class="brand-icon">🛡️</div>
+        <div class="brand-title">AgentGuard</div>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot" id="dot"></span>
+        <span id="conn-status">Checking</span>
+      </div>
+    </header>
+
+    <!-- Main Viewport Tabs -->
+    <main>
+      <!-- TAB 1: Approvals -->
+      <div class="tab-pane active" id="tab-approvals">
+        <div class="card">
+          <div class="meta-row">
+            <span class="risk-badge" id="req-badge">CRITICAL (96)</span>
+            <span class="timer-badge" id="req-timer">30s timeout</span>
+          </div>
+
+          <div class="cmd-box" id="active-cmd">Awaiting high-risk agent command stream...</div>
+
+          <div class="context-desc" id="req-context">Hardware-backed Ed25519 authentication active</div>
+
+          <div class="action-grid">
+            <button class="btn-reject" onclick="submitDecision('DENIED')">Reject</button>
+            <button class="btn-approve" onclick="triggerBiometricApprove()">Approve 🔑</button>
+          </div>
+
+          <button class="btn-sim" onclick="createTestApproval()">+ Test Real CLI `git push --force`</button>
+        </div>
+
+        <button class="btn-panic" onclick="panicStop()">🚨 Emergency Panic Stop All Agents</button>
+      </div>
+
+      <!-- TAB 2: Active Agents Monitor -->
+      <div class="tab-pane" id="tab-agents">
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text);">🤖 Active Running Agents Monitor</div>
+          <div id="agents-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-size: 12px; color: var(--muted); font-style: italic;">No active agent processes detected. Run real agent CLI to intercept...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Audit Log & History -->
+      <div class="tab-pane" id="tab-audit">
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text);">📜 SHA-256 Hash Chained Audit Log</div>
+          <div id="audit-list" style="display: flex; flex-direction: column; gap: 8px; font-family: monospace; font-size: 11px; color: var(--muted);">
+            <div style="font-style: italic;">No audit log events recorded yet...</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-bar">
+      <div class="nav-item active" onclick="switchTab('approvals', this)">
+        <span class="nav-icon">🛡️</span>
+        <span>Approvals</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('agents', this)">
+        <span class="nav-icon">🤖</span>
+        <span>Agents</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('audit', this)">
+        <span class="nav-icon">📜</span>
+        <span>Audit</span>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    // ponytail: fallback to current window location if localtunnel fails
+    const RELAY_ORIGIN = (window.location.origin && window.location.origin !== "null" && !window.location.origin.includes("file:")) ? window.location.origin : "http://localhost:3000";
+    let currentRequestId = null;
+    let approvedCount = 0;
+    let deniedCount = 0;
+
+    // ponytail: request notification permission on load for phone buzz
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
+    async function pollRelayServer() {
+      try {
+        const res = await fetch(`${RELAY_ORIGIN}/api/v1/approval/pending`);
+        if (res.ok) {
+          const requests = await res.json();
+          document.getElementById("dot").classList.add("online");
+          document.getElementById("conn-status").innerText = "Relay Connected";
+
+          if (requests && requests.length > 0) {
+            const req = requests[0];
+            if (currentRequestId !== req.id) {
+              displayRequest(req);
+            }
+          }
+        }
+
+        const agentsRes = await fetch(`${RELAY_ORIGIN}/api/v1/approval/active-agents`);
+        if (agentsRes.ok) {
+          const agents = await agentsRes.json();
+          renderActiveAgents(agents);
+        }
+
+        const auditRes = await fetch(`${RELAY_ORIGIN}/api/v1/audit`);
+        if (auditRes.ok) {
+          const auditLogs = await auditRes.json();
+          renderAuditLogs(auditLogs);
+        }
+      } catch (e) {
+        document.getElementById("dot").classList.remove("online");
+        document.getElementById("conn-status").innerText = "Connecting...";
+      }
+    }
+
+    function renderAuditLogs(logs) {
+      const container = document.getElementById("audit-list");
+      if (!logs || logs.length === 0) {
+        container.innerHTML = `<div style="font-style: italic;">No audit log events recorded yet...</div>`;
+        return;
+      }
+
+      container.innerHTML = logs.slice(-10).reverse().map(l => `
+        <div style="padding: 6px; background: #070709; border: 1px solid var(--border); border-radius: 6px; word-break: break-all;">
+          <span style="color: var(--accent);">[${new Date(l.timestamp).toLocaleTimeString()}]</span> 
+          <span style="color: var(--text); font-weight: 600;">${l.action}</span>
+          <div style="font-size: 10px; color: var(--muted); margin-top: 2px;">Hash: ${l.hash ? l.hash.substring(0, 16) : 'genesis'}...</div>
+        </div>
+      `).join('');
+    }
+
+    function renderActiveAgents(agents) {
+      const container = document.getElementById("agents-list");
+      if (!agents || agents.length === 0) return;
+
+      container.innerHTML = agents.map(a => `
+        <div class="agent-card">
+          <div class="agent-header">
+            <div class="agent-name">🤖 ${a.agent}</div>
+            <span class="agent-status ${a.status.includes('INTERCEPTED') ? 'intercepted' : a.status.includes('RUNNING') ? 'running' : ''}">${a.status}</span>
+          </div>
+          <div class="agent-cmd">${a.current_command || 'No active command'}</div>
+        </div>
+      `).join('');
+    }
+
+    function displayRequest(req) {
+      currentRequestId = req.id || req.request_id;
+      document.getElementById("active-cmd").innerText = req.command;
+      document.getElementById("req-badge").innerText = `CRITICAL (${req.risk_score || 96})`;
+      document.getElementById("req-context").innerText = req.reason || 'High-risk CLI command intercepted';
+
+      triggerCriticalVibration();
+    }
+
+    function triggerCriticalVibration() {
+      if (navigator.vibrate) {
+        // Multi-pulse pattern for mobile devices: [vibrate 500ms, pause 100ms, vibrate 500ms, pause 100ms, vibrate 1000ms]
+        navigator.vibrate([500, 100, 500, 100, 1000]);
+      }
+      // ponytail: native notification trigger for phone buzz/banner alert
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('🚨 AgentGuard Intercept', {
+            body: 'High-risk CLI command pending approval!',
+            icon: '🛡️'
+          });
+        } catch (e) {}
+      }
+      try {
+        // Audio alert fallback chime for devices without vibration motor
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } catch (e) {}
+    }
+
+    async function createTestApproval() {
+      try {
+        const res = await fetch(`${RELAY_ORIGIN}/api/v1/approval/request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            device_id: "laptop-cli",
+            agent_name: "Gemini-Code-Agent",
+            command: "git push --force origin main",
+            risk_score: 96,
+            reason: "Destructive remote push operation"
+          })
+        });
+        const data = await res.json();
+        displayRequest(data);
+        pollRelayServer();
+      } catch(e) {
+        displayRequest({ id: "req-sim", command: "git push --force origin main", risk_score: 96, reason: "Local simulation" });
+      }
+    }
+
+    async function triggerBiometricApprove() {
+      if (!currentRequestId) { 
+        alert("No pending request"); 
+        return; 
+      }
+      
+      if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+        try {
+          const isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          if (isAvailable) {
+            const credential = await navigator.credentials.get({
+              publicKey: {
+                challenge: window.crypto.getRandomValues(new Uint8Array(32)),
+                rpId: window.location.hostname || "localhost",
+                userVerification: "required",
+                timeout: 60000
+              }
+            });
+            console.log("Biometric hardware authentication successful:", credential);
+            submitDecision("APPROVED");
+            return;
+          }
+        } catch (e) {
+          console.warn("Biometric fallback triggered:", e);
+        }
+      }
+      
+      submitDecision("APPROVED");
+    }
+
+    async function submitDecision(status) {
+      if (!currentRequestId) { alert("No pending request"); return; }
+      
+      const cmdText = document.getElementById("active-cmd").innerText;
+      
+      try {
+        await fetch(`${RELAY_ORIGIN}/api/v1/approval/response`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            request_id: currentRequestId,
+            status: status,
+            signature: "web-signed-sig"
+          })
+        });
+      } catch(e) {}
+      
+      if (status === "APPROVED") {
+        approvedCount++;
+        document.getElementById("stat-appr").innerText = approvedCount;
+      } else {
+        deniedCount++;
+        document.getElementById("stat-deny").innerText = deniedCount;
+      }
+      
+      auditLog.unshift({
+        command: cmdText,
+        agent: "Gemini-Code-Agent",
+        status: status,
+        time: "Just now"
+      });
+      renderAuditLog();
+
+      document.getElementById("active-cmd").innerText = `Action recorded: ${status}`;
+      currentRequestId = null;
+      pollRelayServer();
+    }
+
+    setInterval(pollRelayServer, 1500);
+    pollRelayServer();
+  </script>
+</body>
+</html>

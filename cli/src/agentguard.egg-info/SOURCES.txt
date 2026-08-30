@@ -1,6 +1,7 @@
 pyproject.toml
 src/agentguard/__init__.py
 src/agentguard/agentguard_cli.py
+src/agentguard/agentguard_wrapper.py
 src/agentguard/client.py
 src/agentguard/crypto.py
 src/agentguard/db.py
